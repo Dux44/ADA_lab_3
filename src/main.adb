@@ -15,10 +15,10 @@ procedure Main is
 
    protected ItemsHandler is
       procedure SetProduction (Total : in Integer);
+      procedure GetProduction (Result : out Boolean);
+      procedure GetConsumption (Result : out Boolean);
       procedure DecrementProduced;
       procedure DecrementConsumed;
-      function IsProductionDone return Boolean;
-      function IsConsumptionDone return Boolean;
    private
       Left_Produced : Integer := 0;
       Left_Consumed : Integer := 0;
@@ -30,6 +30,16 @@ procedure Main is
          Left_Produced := Total;
          Left_Consumed := Total;
       end SetProduction;
+
+      procedure GetProduction (Result : out Boolean) is
+      begin
+         Result := Left_Produced = 0;
+      end GetProduction;
+
+      procedure GetConsumption (Result : out Boolean) is
+      begin
+          Result := Left_Consumed = 0;
+      end GetConsumption;
 
       procedure DecrementProduced is
       begin
@@ -45,17 +55,29 @@ procedure Main is
          end if;
       end DecrementConsumed;
 
-      function IsProductionDone return Boolean is
-      begin
-         return Left_Produced = 0;
-      end IsProductionDone;
-
-      function IsConsumptionDone return Boolean is
-      begin
-         return Left_Consumed = 0;
-      end IsConsumptionDone;
-
    end ItemsHandler;
+
+   function IsProductionDone return Boolean is
+   begin
+      declare
+         Result : Boolean := False;
+      begin
+         ItemsHandler.GetProduction(Result);
+         ItemsHandler.DecrementProduced;
+         return Result;
+      end;
+   end IsProductionDone;
+
+   function IsConsumptionDone return Boolean is
+   begin
+      declare
+         Result : Boolean := False;
+      begin
+         ItemsHandler.GetConsumption(Result);
+         ItemsHandler.DecrementConsumed;
+         return Result;
+      end;
+   end IsConsumptionDone;
 
    Storage_Size  : Integer := 3;
    Num_Producers : Integer := 1;
@@ -82,17 +104,14 @@ procedure Main is
          Producer.Id := Num;
       end Start;
       Reset (Rand);
-      while not ItemsHandler.IsProductionDone loop
-         ItemsHandler.DecrementProduced;
+      while not IsProductionDone loop
          Full_Storage.Seize;
          Access_Storage.Seize;
-
          Item := Integer (Random (Rand));
          Storage.Append ("item" & Item'Img);
          Put_Line
            (Ada.Characters.Latin_1.ESC & "[33m" & "Producer #" & Id'Img &
             " adds item" & Item'Img & Ada.Characters.Latin_1.ESC & "[0m");
-
          Access_Storage.Release;
          Empty_Storage.Release;
       end loop;
@@ -111,11 +130,9 @@ procedure Main is
       accept Start (Num : Integer) do
          Consumer.Id := Num;
       end Start;
-      while not ItemsHandler.IsConsumptionDone loop
-         ItemsHandler.DecrementConsumed;
+      while not IsConsumptionDone loop
          Empty_Storage.Seize;
          Access_Storage.Seize;
-
          declare
             Item : String := First_Element (Storage);
          begin
@@ -123,7 +140,6 @@ procedure Main is
               (Ada.Characters.Latin_1.ESC & "[36m" & "Consumer #" & Id'Img &
                " took " & Item & Ada.Characters.Latin_1.ESC & "[0m");
             Storage.Delete_First;
-
             Access_Storage.Release;
             Full_Storage.Release;
          end;
